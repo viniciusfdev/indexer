@@ -3,8 +3,8 @@ from typing import List, Set, Union
 from abc import abstractmethod
 from functools import total_ordering
 from os import path
-import os
 import pickle
+import os
 import gc
 
 
@@ -156,16 +156,20 @@ class FileIndex(Index):
             self.save_tmp_occurrences()
 
     def next_from_list(self) -> TermOccurrence:
-        return None
+        return self.lst_occurrences_tmp.pop(0)
 
-    def next_from_file(self, file_idx) -> TermOccurrence:
+    def next_from_file(self, file_idx: "BufferedReader") -> TermOccurrence:
         # next_from_file = pickle.load(file_idx)
-        bytes_doc_id = file_idx.read(4)
-        if not bytes_doc_id:
-            return None
-        # seu código aqui :)
+        b_doc_id = file_idx.read(4)
+        b_term_id = file_idx.read(4)
+        b_term_freq = file_idx.read(4)
 
-        return TermOccurrence(doc_id, term_id, term_freq)
+        if not b_doc_id or not b_term_id or not b_term_freq:
+            raise Exception("Bad structure format")
+
+        return TermOccurrence(int.from_bytes(b_doc_id, byteorder='big', signed=False),
+                              int.from_bytes(b_term_id, byteorder='big', signed=False),
+                              int.from_bytes(b_term_freq, byteorder='big', signed=False))
 
     def save_tmp_occurrences(self):
 
@@ -175,10 +179,18 @@ class FileIndex(Index):
         gc.disable()
 
         # ordena pelo term_id, doc_id
+        self.lst_occurrences_tmp = sorted(self.lst_occurrences_tmp)
 
-        ### Abra um arquivo novo faça a ordenação externa: compar sempre a primeira posição
-        ### da lista com a primeira possição do arquivo usando os métodos next_from_list e next_from_file
+        ### Abra um arquivo novo faça a ordenação externa: comparar sempre a primeira posição
+        ### da lista com a primeira posição do arquivo usando os métodos next_from_list e next_from_file
         ### para armazenar no novo indice ordenado
+        _file = open(self.str_idx_file_name, "wb")
+        while self.lst_occurrences_tmp:
+            to = self.next_from_list()
+            _file.write(to.doc_id.to_bytes(4,byteorder="big"))
+            _file.write(to.term_id.to_bytes(4,byteorder="big"))
+            _file.write(to.term_freq.to_bytes(4,byteorder="big"))
+        _file.close()
 
         gc.enable()
 

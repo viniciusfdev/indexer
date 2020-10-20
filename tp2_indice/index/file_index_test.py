@@ -13,6 +13,7 @@ class FileIndexTest(unittest.TestCase):
         last_occur = TermOccurrence(float('-inf'),float('-inf'),10)
         set_file_occurrences = set()
         with open(obj_index.str_idx_file_name,"rb") as idx_file:
+            idx_file.read
             occur = obj_index.next_from_file(idx_file)
             while occur is not None:
                 self.assertTrue(occur>last_occur, msg=f"A ocorrencia {last_occur} foi colocada de forma incorreta antes da ocorrencia {occur}")
