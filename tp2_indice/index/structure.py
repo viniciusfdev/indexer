@@ -83,15 +83,16 @@ class TermOccurrence:
         return self.__hash__ == other_occurrence.__hash__
 
     def __lt__(self, other_occurrence: "TermOccurrence"):
-        if other_occurrence == None:
+        if not other_occurrence:
             return False
-        if self.term_id < other_occurrence.term_id:
-            if self.doc_id < other_occurrence.doc_id:
-                return True
-            else:
-                return False
-        else:
+        return ((self.term_id, self.doc_id) <
+                (other_occurrence.term_id, other_occurrence.doc_id))
+
+    def __gt__(self, other_occurrence: "TermOccurrence"):
+        if not other_occurrence:
             return False
+        return ((self.term_id, self.doc_id) >
+                (other_occurrence.term_id, other_occurrence.doc_id))
 
     def __str__(self):
         return f"(term_id:{self.term_id} doc: {self.doc_id} freq: {self.term_freq})"
