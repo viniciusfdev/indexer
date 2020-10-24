@@ -77,7 +77,7 @@ class TermOccurrence:
         pass
 
     def __hash__(self):
-        return hash((self.doc_id, self.term_id))
+        return hash((self.doc_id, self.term_id, self.term_freq))
 
     def __eq__(self, other_occurrence: "TermOccurrence"):
         return self.__hash__ == other_occurrence.__hash__
@@ -162,9 +162,8 @@ class FileIndex(Index):
         # next_from_file = pickle.load(file_idx)
         termOccurrence = None
         gc.disable()
-        _file = open(self.str_idx_file_name, "wb")
         try:
-            to = pickle.load(_file, file_idx)
+            to = pickle.load(file_idx)
             
             if not to["doc_id"] and not to["term_id"] or not to["term_freq"]:
                 raise Exception("Bad structure format")
@@ -174,7 +173,6 @@ class FileIndex(Index):
             pass
         finally:
             gc.disable()
-            _file.close()
             return termOccurrence
 
     def save_tmp_occurrences(self):

@@ -12,6 +12,9 @@ class FileIndexTest(unittest.TestCase):
         self.assertEqual(len( obj_index.lst_occurrences_tmp),0,"A lista de ocorrencias deve ser zerada após chamar o método save_tmp_occurrences")
         last_occur = TermOccurrence(float('-inf'),float('-inf'),10)
         set_file_occurrences = set()
+
+        print(set_occurrences)
+
         with open(obj_index.str_idx_file_name,"rb") as idx_file:
             idx_file.read
             occur = obj_index.next_from_file(idx_file)
@@ -20,9 +23,10 @@ class FileIndexTest(unittest.TestCase):
                 set_file_occurrences.add(occur)
                 last_occur = occur
                 occur = obj_index.next_from_file(idx_file)
-
+        
         sobra_arquivo = set_file_occurrences-set_occurrences
         sobra_lista = set_occurrences-set_file_occurrences
+        print(set_file_occurrences)
         self.assertEqual(len(sobra_arquivo),0, f"Existem ocorrências no arquivo que não estavam na 'lst_occurrences_tmp': {sobra_arquivo} ")
         self.assertEqual(len(sobra_lista),0, f"As seguintes ocorrências não foram inseridas no arquivo de indice: {sobra_lista} ")
 
