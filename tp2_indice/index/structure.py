@@ -160,16 +160,22 @@ class FileIndex(Index):
 
     def next_from_file(self, file_idx: "BufferedReader") -> TermOccurrence:
         # next_from_file = pickle.load(file_idx)
-        b_doc_id = file_idx.read(4)
-        b_term_id = file_idx.read(4)
-        b_term_freq = file_idx.read(4)
+        termOccurrence = None
+        gc.disable()
+        _file = open(self.str_idx_file_name, "wb")
+        try:
+            to = pickle.load(_file, file_idx)
+            
+            if not to["doc_id"] and not to["term_id"] or not to["term_freq"]:
+                raise Exception("Bad structure format")
 
-        if not b_doc_id or not b_term_id or not b_term_freq:
-            raise Exception("Bad structure format")
-
-        return TermOccurrence(int.from_bytes(b_doc_id, byteorder='big', signed=False),
-                              int.from_bytes(b_term_id, byteorder='big', signed=False),
-                              int.from_bytes(b_term_freq, byteorder='big', signed=False))
+            termOccurrence = TermOccurrence(to["doc_id"], to["term_id"], to["term_freq"])
+        except:
+            pass
+        finally:
+            gc.disable()
+            _file.close()
+            return termOccurrence
 
     def save_tmp_occurrences(self):
 
@@ -187,11 +193,9 @@ class FileIndex(Index):
         _file = open(self.str_idx_file_name, "wb")
         while self.lst_occurrences_tmp:
             to = self.next_from_list()
-            _file.write(to.doc_id.to_bytes(4,byteorder="big"))
-            _file.write(to.term_id.to_bytes(4,byteorder="big"))
-            _file.write(to.term_freq.to_bytes(4,byteorder="big"))
+            pickle.dump({ "doc_id": to.doc_id, "term_id": to.term_id, "term_freq": to.term_freq}, _file)
+        
         _file.close()
-
         gc.enable()
 
     def finish_indexing(self):
