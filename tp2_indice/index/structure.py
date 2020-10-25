@@ -6,7 +6,9 @@ from os import path
 import pickle
 import os
 import gc
+import sys
 
+sys.setrecursionlimit(2000000)
 
 class Index:
     def __init__(self):
@@ -249,7 +251,7 @@ class FileIndex(Index):
         occurrence_list = []
         if not term in self.dic_index:
             return []
-            
+
         with open(self.str_idx_file_name, 'rb') as idx_file:
             while True:
                 to = self.next_from_file(idx_file)
