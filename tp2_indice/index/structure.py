@@ -17,7 +17,7 @@ class Index:
         self.set_documents.add(doc_id)
         
         if term not in self.dic_index:
-            int_term_id = 1
+            int_term_id = len(self.dic_index) + 1
             self.dic_index[term] = self.create_index_entry(int_term_id)
         else:
             int_term_id = self.get_term_id(term)
@@ -223,6 +223,7 @@ class FileIndex(Index):
 
         # Sugestão: faça a navegação e obetenha um mapeamento
         # id_termo -> obj_termo armazene-o em dic_ids_por_termo
+        
         dic_ids_por_termo = {}
         for str_term, obj_term in self.dic_index.items():
             dic_ids_por_termo[obj_term.term_id] = { "term": str_term, "tfp": obj_term }
@@ -245,7 +246,22 @@ class FileIndex(Index):
             self.dic_index[e["term"]] = e["tfp"]
 
     def get_occurrence_list(self, term: str) -> List:
-        return [self.dic_index[term]] if term in self.dic_index else []
+        occurrence_list = []
+        if not term in self.dic_index:
+            return []
+            
+        with open(self.str_idx_file_name, 'rb') as idx_file:
+            while True:
+                to = self.next_from_file(idx_file)
+                if not to:
+                    break
+                else:
+                    if to.term_id == self.dic_index[term].term_id:
+                        occurrence_list.append(to)
+
+
+
+        return occurrence_list
 
     def document_count_with_term(self, term: str) -> int:
         return (
