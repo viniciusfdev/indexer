@@ -195,7 +195,7 @@ class FileIndex(Index):
             self.str_idx_file_name = (
                 (self.str_idx_file_name + str(self.idx_file_counter))
                 if self.idx_file_counter == 0
-                else self.str_idx_file_name[:-1] + str(self.idx_file_counter))
+                else self.str_idx_file_name.replace(str(self.idx_file_counter - 1), str(self.idx_file_counter)))
 
             with open(self.str_idx_file_name, "ab") as w_file:
                 # RECURSIVE OPTION
