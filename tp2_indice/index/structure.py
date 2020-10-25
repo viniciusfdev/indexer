@@ -122,8 +122,6 @@ class HashIndex(Index):
 class TermFilePosition:
     def __init__(self, term_id: int, term_file_start_pos: int = None, doc_count_with_term: int = None):
         self.term_id = term_id
-
-        # a serem definidos após a indexação
         self.term_file_start_pos = term_file_start_pos
         self.doc_count_with_term = doc_count_with_term
 
@@ -227,18 +225,33 @@ class FileIndex(Index):
         # id_termo -> obj_termo armazene-o em dic_ids_por_termo
         dic_ids_por_termo = {}
         for str_term, obj_term in self.dic_index.items():
-            pass
+            dic_ids_por_termo[obj_term.term_id] = { "term": str_term, "tfp": obj_term }
 
+        # navega nas ocorrencias para atualizar cada termo em dic_ids_por_termo
+        # apropriadamente
         with open(self.str_idx_file_name, 'rb') as idx_file:
-            # navega nas ocorrencias para atualizar cada termo em dic_ids_por_termo
-            # apropriadamente
-            pass
+            pos = 0
+            while True:
+                to = self.next_from_file(idx_file)
+                if not to:
+                    break
+
+                if to.term_id in dic_ids_por_termo:
+                    dic_ids_por_termo[to.term_id]["tfp"].doc_count_with_term = (
+                        self.document_count_with_term(dic_ids_por_termo[to.term_id]["term"]) + 1)
+                    dic_ids_por_termo[to.term_id]["tfp"].term_file_start_pos = pos
+
+        for i, e in dic_ids_por_termo.items():
+            self.dic_index[e["term"]] = e["tfp"]
 
     def get_occurrence_list(self, term: str) -> List:
-        return []
+        return [self.dic_index[term]] if term in self.dic_index else []
 
     def document_count_with_term(self, term: str) -> int:
-        return 0
+        return (
+            self.dic_index[term].doc_count_with_term 
+            if term in self.dic_index and self.dic_index[term].doc_count_with_term
+            else 0)
 
 
 class Indexer:
