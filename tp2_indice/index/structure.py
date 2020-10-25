@@ -8,7 +8,6 @@ import os
 import gc
 import sys
 
-sys.setrecursionlimit(2000000)
 
 class Index:
     def __init__(self):
@@ -191,32 +190,40 @@ class FileIndex(Index):
         if self.idx_file_counter == 0:
             open(self.str_idx_file_name, "wb+").close()
 
-        r_file = open(self.str_idx_file_name, "rb")
-        
-        self.str_idx_file_name = (
-            (self.str_idx_file_name + str(self.idx_file_counter))
-            if self.idx_file_counter == 0
-            else self.str_idx_file_name[:-1] + str(self.idx_file_counter))
+        with open(self.str_idx_file_name, "rb") as r_file:
 
-        w_file = open(self.str_idx_file_name, "ab")
+            self.str_idx_file_name = (
+                (self.str_idx_file_name + str(self.idx_file_counter))
+                if self.idx_file_counter == 0
+                else self.str_idx_file_name[:-1] + str(self.idx_file_counter))
 
-        def compare_and_add (nff, nfl):
-            if not nff and not nfl:
-                return None
+            with open(self.str_idx_file_name, "ab") as w_file:
+                # RECURSIVE OPTION
+                # def compare_and_add (nff, nfl):
+                #     if not nff and not nfl:
+                #         return None
 
-            if (nff and not nfl) or nff < nfl:
-                pickle.dump({ "doc_id": nff.doc_id, "term_id": nff.term_id, "term_freq": nff.term_freq}, w_file)
-                compare_and_add(self.next_from_file(r_file), nfl)
-            else:
-                pickle.dump({ "doc_id": nfl.doc_id, "term_id": nfl.term_id, "term_freq": nfl.term_freq}, w_file)
-                compare_and_add(nff, self.next_from_list())
+                #     if (nff and not nfl) or nff < nfl:
+                #         pickle.dump({ "doc_id": nff.doc_id, "term_id": nff.term_id, "term_freq": nff.term_freq}, w_file)
+                #         compare_and_add(self.next_from_file(r_file), nfl)
+                #     else:
+                #         pickle.dump({ "doc_id": nfl.doc_id, "term_id": nfl.term_id, "term_freq": nfl.term_freq}, w_file)
+                #         compare_and_add(nff, self.next_from_list())
 
-        compare_and_add(self.next_from_file(r_file), self.next_from_list())
+                # compare_and_add(self.next_from_file(r_file), self.next_from_list())
 
-        self.idx_file_counter = self.idx_file_counter + 1
+                nff = self.next_from_file(r_file)
+                nfl = self.next_from_list()
+                while nff or nfl:
+                    if (nff and not nfl) or nff < nfl:
+                        pickle.dump({ "doc_id": nff.doc_id, "term_id": nff.term_id, "term_freq": nff.term_freq}, w_file)
+                        nff = self.next_from_file(r_file)
+                    else:
+                        pickle.dump({ "doc_id": nfl.doc_id, "term_id": nfl.term_id, "term_freq": nfl.term_freq}, w_file)
+                        nfl = self.next_from_list()
 
-        r_file.close()
-        w_file.close()
+                self.idx_file_counter = self.idx_file_counter + 1
+
         gc.enable()
 
     def finish_indexing(self):
