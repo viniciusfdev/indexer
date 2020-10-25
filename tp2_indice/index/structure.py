@@ -80,7 +80,8 @@ class TermOccurrence:
         return hash((self.doc_id, self.term_id, self.term_freq))
 
     def __eq__(self, other_occurrence: "TermOccurrence"):
-        return self.__hash__ == other_occurrence.__hash__
+        return ((self.doc_id, self.term_id, self.term_freq) == 
+                (other_occurrence.doc_id, other_occurrence.term_id, other_occurrence.term_freq))
 
     def __lt__(self, other_occurrence: "TermOccurrence"):
         if not other_occurrence:
@@ -95,7 +96,7 @@ class TermOccurrence:
                 (other_occurrence.term_id, other_occurrence.doc_id))
 
     def __str__(self):
-        return f"(term_id:{self.term_id} doc: {self.doc_id} freq: {self.term_freq})"
+        return f"(doc: {self.doc_id} term_id:{self.term_id} freq: {self.term_freq})"
 
     def __repr__(self):
         return str(self)
@@ -138,10 +139,9 @@ class FileIndex(Index):
 
     def __init__(self):
         super().__init__()
-
         self.lst_occurrences_tmp = []
         self.idx_file_counter = 0
-        self.str_idx_file_name = "occur_idx_file"
+        self.str_idx_file_name = "occur_idx_file"  
 
     def get_term_id(self, term: str):
         return self.dic_index[term].term_id
@@ -156,10 +156,10 @@ class FileIndex(Index):
             self.save_tmp_occurrences()
 
     def next_from_list(self) -> TermOccurrence:
-        return self.lst_occurrences_tmp.pop(0)
+        return self.lst_occurrences_tmp.pop(0) if self.lst_occurrences_tmp else None
 
     def next_from_file(self, file_idx: "BufferedReader") -> TermOccurrence:
-        # next_from_file = pickle.load(file_idx)
+        file_idx.read
         termOccurrence = None
         gc.disable()
         try:
@@ -170,7 +170,7 @@ class FileIndex(Index):
 
             termOccurrence = TermOccurrence(to["doc_id"], to["term_id"], to["term_freq"])
         except:
-            pass
+            return None
         finally:
             gc.disable()
             return termOccurrence
@@ -188,12 +188,35 @@ class FileIndex(Index):
         ### Abra um arquivo novo faça a ordenação externa: comparar sempre a primeira posição
         ### da lista com a primeira posição do arquivo usando os métodos next_from_list e next_from_file
         ### para armazenar no novo indice ordenado
-        _file = open(self.str_idx_file_name, "wb")
-        while self.lst_occurrences_tmp:
-            to = self.next_from_list()
-            pickle.dump({ "doc_id": to.doc_id, "term_id": to.term_id, "term_freq": to.term_freq}, _file)
+        if self.idx_file_counter == 0:
+            open(self.str_idx_file_name, "wb+").close()
+
+        r_file = open(self.str_idx_file_name, "rb")
         
-        _file.close()
+        self.str_idx_file_name = (
+            (self.str_idx_file_name + str(self.idx_file_counter))
+            if self.idx_file_counter == 0
+            else self.str_idx_file_name[:-1] + str(self.idx_file_counter))
+
+        w_file = open(self.str_idx_file_name, "ab")
+
+        def compare_and_add (nff, nfl):
+            if not nff and not nfl:
+                return None
+
+            if (nff and not nfl) or nff < nfl:
+                pickle.dump({ "doc_id": nff.doc_id, "term_id": nff.term_id, "term_freq": nff.term_freq}, w_file)
+                compare_and_add(self.next_from_file(r_file), nfl)
+            else:
+                pickle.dump({ "doc_id": nfl.doc_id, "term_id": nfl.term_id, "term_freq": nfl.term_freq}, w_file)
+                compare_and_add(nff, self.next_from_list())
+
+        compare_and_add(self.next_from_file(r_file), self.next_from_list())
+
+        self.idx_file_counter = self.idx_file_counter + 1
+
+        r_file.close()
+        w_file.close()
         gc.enable()
 
     def finish_indexing(self):

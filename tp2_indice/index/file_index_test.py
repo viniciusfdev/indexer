@@ -8,12 +8,10 @@ from .performance_test import PerformanceTest
 class FileIndexTest(unittest.TestCase):
 
     def check_idx_file(self, obj_index, set_occurrences):
-        print("verifica a ordem das ocorrencias")
+        # print("verifica a ordem das ocorrencias")
         self.assertEqual(len( obj_index.lst_occurrences_tmp),0,"A lista de ocorrencias deve ser zerada após chamar o método save_tmp_occurrences")
         last_occur = TermOccurrence(float('-inf'),float('-inf'),10)
         set_file_occurrences = set()
-
-        print(set_occurrences)
 
         with open(obj_index.str_idx_file_name,"rb") as idx_file:
             idx_file.read
@@ -26,13 +24,12 @@ class FileIndexTest(unittest.TestCase):
         
         sobra_arquivo = set_file_occurrences-set_occurrences
         sobra_lista = set_occurrences-set_file_occurrences
-        print(set_file_occurrences)
         self.assertEqual(len(sobra_arquivo),0, f"Existem ocorrências no arquivo que não estavam na 'lst_occurrences_tmp': {sobra_arquivo} ")
         self.assertEqual(len(sobra_lista),0, f"As seguintes ocorrências não foram inseridas no arquivo de indice: {sobra_lista} ")
 
     def test_save_tmp_occurrences(self):
 
-        print("testa a primeira vez (adicionando tudo na primeira vez)")
+        # print("testa a primeira vez (adicionando tudo na primeira vez)")
         self.index = FileIndex()
         set_occurrences = []
         self.index.lst_occurrences_tmp = [TermOccurrence(2,4,5),
@@ -44,7 +41,7 @@ class FileIndexTest(unittest.TestCase):
         self.check_idx_file(self.index, set_occurrences)
         print("Primeira execução (criação inicial do indice) [ok]")
 
-        print("adicina alguns")
+        # print("adicina alguns")
         self.index.lst_occurrences_tmp = [TermOccurrence(1,3,3),
                                         TermOccurrence(2,3,4)]
         set_occurrences = set_occurrences | set(self.index.lst_occurrences_tmp)
@@ -55,12 +52,12 @@ class FileIndexTest(unittest.TestCase):
 
 
 
-        print("adiciona mais alguns")
+        # print("adiciona mais alguns")
         self.index.lst_occurrences_tmp = [TermOccurrence(2,1,2),
                                         TermOccurrence(3,2,2),
                                         TermOccurrence(3,1,1)]
 
-        print("checa ordenação do arquivo e verifica todas as ocorrencias existem")
+        # print("checa ordenação do arquivo e verifica todas as ocorrencias existem")
         set_occurrences = set_occurrences|set(self.index.lst_occurrences_tmp)
         self.index.save_tmp_occurrences()
         self.check_idx_file(self.index, set_occurrences)
