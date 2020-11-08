@@ -1,9 +1,8 @@
 from nltk.stem.snowball import SnowballStemmer
+from nltk.tokenize import word_tokenize
 from bs4 import BeautifulSoup
 import string
-from nltk.tokenize import word_tokenize
 import os
-
 
 class Cleaner:
     def __init__(self,stop_words_file:str,language:str,
@@ -14,8 +13,8 @@ class Cleaner:
         self.stemmer = SnowballStemmer(language)
         in_table =  "áéíóúâêôçãẽõü"
         out_table = "aeiouaeocaeou"
-        #altere a linha abaixo para remoção de acentos (Atividade 11)
-        self.accents_translation_table = None
+        
+        self.accents_translation_table = str.maketrans(in_table, out_table)
         self.set_punctuation = set(string.punctuation)
 
         #flags
@@ -24,7 +23,10 @@ class Cleaner:
         self.perform_stemming = perform_stemming
 
     def html_to_plain_text(self,html_doc:str) ->str:
-        return None
+        try: 
+            return BeautifulSoup(html_doc, features="lxml").get_text()
+        except: 
+            return None
 
     def read_stop_words(self,str_file):
         set_stop_words = set()
@@ -33,22 +35,33 @@ class Cleaner:
                 arr_words = line.split(",")
                 [set_stop_words.add(word) for word in arr_words]
         return set_stop_words
-    def is_stop_word(self,term:str):
-        return True
+    
+    def is_stop_word(self,term: str):
+        return True if term in self.set_stop_words else False
 
     def word_stem(self,term:str):
-        return ""
+        return self.stemmer.stem(term)
 
 
-    def remove_accents(self,term:str) ->str:
-        return None
+    def remove_accents(self,term: str) -> str:
+        return term.translate(self.accents_translation_table)
 
+    def is_accent(self, term: str) -> str:
+        return self.remove_accents(term) == term
 
     def preprocess_word(self,term:str) -> str:
+        if self.perform_stop_words_removal and self.is_stop_word(term) and self.is_accent(term):
+            return None
+        
+        term = str.lower(term)
 
-        return None
+        if self.perform_accents_removal:
+            term = self.remove_accents(term)  
 
+        if self.perform_stemming:
+            term = self.word_stem(term)
 
+        return term
 
 class HTMLIndexer:
     cleaner = Cleaner(stop_words_file="stopwords.txt",
