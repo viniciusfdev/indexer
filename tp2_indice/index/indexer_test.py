@@ -5,9 +5,9 @@ import unittest
 
 class IndexerTest(unittest.TestCase):
     def test_indexer_wiki(self):
-        obj_index = HashIndex()
+        obj_index = FileIndex()
         html_indexer = HTMLIndexer(obj_index)
-        html_indexer.index_all_text_recursively("wiki/pt/articles/a/a/a")
+        html_indexer.index_all_text_recursively("wiki/")
 
     def test_indexer(self):
         obj_index = HashIndex()

@@ -7,7 +7,7 @@ import string
 import nltk
 import os
 
-nltk.download('punkt')
+# nltk.download('punkt')
 
 class Cleaner:
     def __init__(self,stop_words_file:str,language:str,
@@ -109,4 +109,7 @@ class HTMLIndexer:
         for i, path in enumerate(Path(path).rglob('*.html')):
             with open(path, "r") as idx_file:
                 idx_file.read
-                self.index_text(i, idx_file)
+                try:
+                    self.index_text(i, idx_file)
+                except:
+                    pass
