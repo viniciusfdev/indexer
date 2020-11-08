@@ -1,5 +1,8 @@
+import fnmatch
+
 from nltk.stem.snowball import SnowballStemmer
 from bs4 import BeautifulSoup
+from pathlib import Path
 import string
 import nltk
 import os
@@ -91,6 +94,7 @@ class HTMLIndexer:
             self.index.index(w, doc_id, freq)
 
     def index_text_dir(self, path: str):
+        # Exercício 14
         for str_sub_dir in os.listdir(path):
             path_sub_dir = f"{path}/{str_sub_dir}"
             for str_sub_sub in os.listdir(path_sub_dir):
@@ -99,4 +103,10 @@ class HTMLIndexer:
                     idx_file.read
                     ID = int(str_sub_sub.split(".")[0])
                     self.index_text(ID, idx_file)
-        
+
+    # Wikipedia
+    def index_all_text_recursively(self, path: str):
+        for i, path in enumerate(Path(path).rglob('*.html')):
+            with open(path, "r") as idx_file:
+                idx_file.read
+                self.index_text(i, idx_file)
