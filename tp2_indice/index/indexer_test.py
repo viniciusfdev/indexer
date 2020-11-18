@@ -8,7 +8,7 @@ class IndexerTest(unittest.TestCase):
         print("running")
         obj_index = FileIndex()
         html_indexer = HTMLIndexer(obj_index)
-        html_indexer.index_all_text_recursively("wiki/pt/articles/a")
+        html_indexer.index_all_text_recursively("wiki")
 
     def test_indexer(self):
         obj_index = HashIndex()
