@@ -1,84 +1,91 @@
 import fnmatch
+import tracemalloc
+from datetime import datetime
 
+from IPython.display import clear_output
 from nltk.stem.snowball import SnowballStemmer
 from bs4 import BeautifulSoup
 from pathlib import Path
 import string
 import nltk
 import os
+import time
+import psutil
+
 
 # nltk.download('punkt')
 
 class Cleaner:
-    def __init__(self,stop_words_file:str,language:str,
-                        perform_stop_words_removal:bool,perform_accents_removal:bool,
-                        perform_stemming:bool):
+    def __init__(self, stop_words_file: str, language: str,
+                 perform_stop_words_removal: bool, perform_accents_removal: bool,
+                 perform_stemming: bool):
         self.set_stop_words = self.read_stop_words(stop_words_file)
 
         self.stemmer = SnowballStemmer(language)
-        in_table =  "áéíóúâêôçãẽõü"
+        in_table = "áéíóúâêôçãẽõü"
         out_table = "aeiouaeocaeou"
-        
+
         self.accents_translation_table = str.maketrans(in_table, out_table)
         self.set_punctuation = set(string.punctuation)
 
-        #flags
+        # flags
         self.perform_stop_words_removal = perform_stop_words_removal
         self.perform_accents_removal = perform_accents_removal
         self.perform_stemming = perform_stemming
 
-    def html_to_plain_text(self,html_doc:str) ->str:
-        try: 
+    def html_to_plain_text(self, html_doc: str) -> str:
+        try:
             return BeautifulSoup(html_doc, features="lxml").get_text()
-        except: 
+        except:
             return None
 
-    def read_stop_words(self,str_file):
+    def read_stop_words(self, str_file):
         set_stop_words = set()
         with open(str_file, "r") as stop_words_file:
             for line in stop_words_file:
                 arr_words = line.split("\n")
                 [set_stop_words.add(word) for word in arr_words]
         return set_stop_words
-    
-    def is_stop_word(self,term: str):
+
+    def is_stop_word(self, term: str):
         return True if term in self.set_stop_words else False
 
-    def word_stem(self,term:str):
+    def word_stem(self, term: str):
         return self.stemmer.stem(term)
 
-    def remove_accents(self,term: str) -> str:
+    def remove_accents(self, term: str) -> str:
         return term.translate(self.accents_translation_table)
 
-    def preprocess_word(self,term:str) -> str:
+    def preprocess_word(self, term: str) -> str:
         term = str.lower(term)
 
         if self.perform_stop_words_removal and self.is_stop_word(term):
             return None
 
         if self.perform_accents_removal:
-            term = self.remove_accents(term)  
+            term = self.remove_accents(term)
 
         if self.perform_stemming:
             term = self.word_stem(term)
 
         return term
 
+
 class HTMLIndexer:
     cleaner = Cleaner(stop_words_file="stopwords.txt",
-                        language="portuguese",
-                        perform_stop_words_removal=True,
-                        perform_accents_removal=True,
-                        perform_stemming=True)
-    
+                      language="portuguese",
+                      perform_stop_words_removal=True,
+                      perform_accents_removal=True,
+                      perform_stemming=True)
+
     def __init__(self, index: "HashIndex"):
         self.index = index
 
-    def text_word_count(self,plain_text:str):
+    def text_word_count(self, plain_text: str):
         dic_word_count = {}
-        
+
         words = [self.cleaner.preprocess_word(w) for w in nltk.word_tokenize(plain_text)]
-        
+
         for w in words:
             if w in dic_word_count:
                 dic_word_count[w] = dic_word_count[w] + 1
@@ -86,10 +93,10 @@ class HTMLIndexer:
                 dic_word_count[w] = 1
         return dic_word_count
 
-    def index_text(self,doc_id:int, text_html:str):
-        plain_text = self.cleaner.html_to_plain_text(text_html) # (1)
-        dict_text = self.text_word_count(plain_text) #(2)
-        
+    def index_text(self, doc_id: int, text_html: str):
+        plain_text = self.cleaner.html_to_plain_text(text_html)  # (1)
+        dict_text = self.text_word_count(plain_text)  # (2)
+
         for w, freq in dict_text.items():
             self.index.index(w, doc_id, freq)
 
@@ -106,10 +113,27 @@ class HTMLIndexer:
 
     # Wikipedia
     def index_all_text_recursively(self, path: str):
+        self.time = datetime.now()
+        tracemalloc.start()
+
         for i, path in enumerate(Path(path).rglob('*.html')):
+            # delta = datetime.now() - self.time
+            # self.print_status(delta)
             with open(path, "r") as idx_file:
                 idx_file.read
                 try:
                     self.index_text(i, idx_file)
                 except:
                     pass
+
+        delta = datetime.now() - self.time
+        self.print_status(delta)
+        tracemalloc.stop()
+        self.index.calc_avg_time_mem(delta.total_seconds())
+
+    def print_status(self, delta):
+        current, peak = tracemalloc.get_traced_memory()
+
+        clear_output(wait=True)
+        print((f"Memoria usada: {current / 10 ** 6:,} MB; Máximo {peak / 10 ** 6:,} MB"), flush=True)
+        print((f"Tempo gasto: {delta.total_seconds()}s"), flush=True)

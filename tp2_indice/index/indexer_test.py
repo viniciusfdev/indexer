@@ -1,14 +1,18 @@
+import math
+import tracemalloc
+from datetime import datetime
+
+from IPython.core.display import clear_output
 from index.indexer import *
 from index.structure import *
 import unittest
 
-
 class IndexerTest(unittest.TestCase):
     def test_indexer_wiki(self):
-        print("running")
+        print("running...")
         obj_index = FileIndex()
         html_indexer = HTMLIndexer(obj_index)
-        html_indexer.index_all_text_recursively("wiki")
+        html_indexer.index_all_text_recursively("wiki/100")
 
     def test_indexer(self):
         obj_index = HashIndex()

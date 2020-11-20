@@ -7,16 +7,23 @@ import pickle
 import os
 import gc
 import sys
+import psutil
+import time
+import json
 
 
 class Index:
     def __init__(self):
         self.dic_index = {}
         self.set_documents = set()
+        self.times_index = []
+        self.init_time = time.time()
+        self.end_time = time.time()
 
     def index(self, term: str, doc_id: int, term_freq: int):
+        self.init_time = time.time()
         self.set_documents.add(doc_id)
-        
+
         if term not in self.dic_index:
             int_term_id = len(self.dic_index) + 1
             self.dic_index[term] = self.create_index_entry(int_term_id)
@@ -81,7 +88,7 @@ class TermOccurrence:
         return hash((self.doc_id, self.term_id, self.term_freq))
 
     def __eq__(self, other_occurrence: "TermOccurrence"):
-        return ((self.doc_id, self.term_id, self.term_freq) == 
+        return ((self.doc_id, self.term_id, self.term_freq) ==
                 (other_occurrence.doc_id, other_occurrence.term_id, other_occurrence.term_freq))
 
     def __lt__(self, other_occurrence: "TermOccurrence"):
@@ -120,6 +127,7 @@ class HashIndex(Index):
     def document_count_with_term(self, term: str) -> int:
         return len(self.dic_index[term]) if term in self.dic_index else 0
 
+
 class TermFilePosition:
     def __init__(self, term_id: int, term_file_start_pos: int = None, doc_count_with_term: int = None):
         self.term_id = term_id
@@ -134,13 +142,14 @@ class TermFilePosition:
 
 
 class FileIndex(Index):
-    TMP_OCCURRENCES_LIMIT = 1000000
+    # TMP_OCCURRENCES_LIMIT = 1000000
+    TMP_OCCURRENCES_LIMIT = 10000
 
     def __init__(self):
         super().__init__()
         self.lst_occurrences_tmp = []
         self.idx_file_counter = 0
-        self.str_idx_file_name = "occur_idx_file"  
+        self.str_idx_file_name = "occur_idx_file"
 
     def get_term_id(self, term: str):
         return self.dic_index[term].term_id
@@ -154,6 +163,22 @@ class FileIndex(Index):
         if len(self.lst_occurrences_tmp) >= FileIndex.TMP_OCCURRENCES_LIMIT:
             self.save_tmp_occurrences()
 
+    def calc_avg_time_mem(self, total_time):
+        print("Arquivos indexados: " + str(self.idx_file_counter))
+        print("Tempo médio por arquivo: " + str(round(total_time / self.idx_file_counter, 2)) + "s")
+
+        dic_convert = json.dumps(self.dic_index, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+        f = open("dic_index.json", "w")
+        f.write(dic_convert)
+        f.close()
+
+        with open('vocabulary.txt', 'a') as vocabulary_file:
+            vocabulary_file.write('Vocabulary:\n')
+            for key, value in self.dic_index.items():
+                vocabulary_file.write(str(key) + "\n")
+
+
+
     def next_from_list(self) -> TermOccurrence:
         return self.lst_occurrences_tmp.pop(0) if self.lst_occurrences_tmp else None
 
@@ -163,7 +188,7 @@ class FileIndex(Index):
         gc.disable()
         try:
             to = pickle.load(file_idx)
-            
+
             if not to["doc_id"] and not to["term_id"] or not to["term_freq"]:
                 raise Exception("Bad structure format")
 
@@ -216,10 +241,10 @@ class FileIndex(Index):
                 nfl = self.next_from_list()
                 while nff or nfl:
                     if (nff and not nfl) or nff < nfl:
-                        pickle.dump({ "doc_id": nff.doc_id, "term_id": nff.term_id, "term_freq": nff.term_freq}, w_file)
+                        pickle.dump({"doc_id": nff.doc_id, "term_id": nff.term_id, "term_freq": nff.term_freq}, w_file)
                         nff = self.next_from_file(r_file)
                     else:
-                        pickle.dump({ "doc_id": nfl.doc_id, "term_id": nfl.term_id, "term_freq": nfl.term_freq}, w_file)
+                        pickle.dump({"doc_id": nfl.doc_id, "term_id": nfl.term_id, "term_freq": nfl.term_freq}, w_file)
                         nfl = self.next_from_list()
 
                 self.idx_file_counter = self.idx_file_counter + 1
@@ -232,10 +257,10 @@ class FileIndex(Index):
 
         # Sugestão: faça a navegação e obetenha um mapeamento
         # id_termo -> obj_termo armazene-o em dic_ids_por_termo
-        
+
         dic_ids_por_termo = {}
         for str_term, obj_term in self.dic_index.items():
-            dic_ids_por_termo[obj_term.term_id] = { "term": str_term, "tfp": obj_term }
+            dic_ids_por_termo[obj_term.term_id] = {"term": str_term, "tfp": obj_term}
 
         # navega nas ocorrencias para atualizar cada termo em dic_ids_por_termo
         # apropriadamente
@@ -248,7 +273,7 @@ class FileIndex(Index):
 
                 if to.term_id in dic_ids_por_termo:
                     dic_ids_por_termo[to.term_id]["tfp"].doc_count_with_term = (
-                        self.document_count_with_term(dic_ids_por_termo[to.term_id]["term"]) + 1)
+                            self.document_count_with_term(dic_ids_por_termo[to.term_id]["term"]) + 1)
                     dic_ids_por_termo[to.term_id]["tfp"].term_file_start_pos = pos
 
         for i, e in dic_ids_por_termo.items():
@@ -268,13 +293,11 @@ class FileIndex(Index):
                     if to.term_id == self.dic_index[term].term_id:
                         occurrence_list.append(to)
 
-
-
         return occurrence_list
 
     def document_count_with_term(self, term: str) -> int:
         return (
-            self.dic_index[term].doc_count_with_term 
+            self.dic_index[term].doc_count_with_term
             if term in self.dic_index and self.dic_index[term].doc_count_with_term
             else 0)
 
@@ -304,5 +327,3 @@ class Indexer:
     # percorre o documento
     def paser_doc(self):
         pass
-
-
