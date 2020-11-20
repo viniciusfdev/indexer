@@ -10,6 +10,7 @@ import sys
 import psutil
 import time
 import json
+import os
 
 
 class Index:
@@ -126,6 +127,20 @@ class HashIndex(Index):
 
     def document_count_with_term(self, term: str) -> int:
         return len(self.dic_index[term]) if term in self.dic_index else 0
+
+    def finish_indexing(self):
+        pass
+
+    def calc_avg_time_mem(self):
+        dic_convert = json.dumps(self.dic_index, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+        f = open("dic_index.json", "w")
+        f.write(dic_convert)
+        f.close()
+
+        with open('vocabulary.txt', 'a') as vocabulary_file:
+            vocabulary_file.write('Vocabulary:\n')
+            for key, value in self.dic_index.items():
+                vocabulary_file.write(str(key) + "\n")
 
 
 class TermFilePosition:
@@ -264,17 +279,23 @@ class FileIndex(Index):
 
         # navega nas ocorrencias para atualizar cada termo em dic_ids_por_termo
         # apropriadamente
-        with open(self.str_idx_file_name, 'rb') as idx_file:
-            pos = 0
-            while True:
-                to = self.next_from_file(idx_file)
-                if not to:
-                    break
 
-                if to.term_id in dic_ids_por_termo:
-                    dic_ids_por_termo[to.term_id]["tfp"].doc_count_with_term = (
-                            self.document_count_with_term(dic_ids_por_termo[to.term_id]["term"]) + 1)
-                    dic_ids_por_termo[to.term_id]["tfp"].term_file_start_pos = pos
+        size = os.path.getsize(self.str_idx_file_name)
+        if size < 8589934592:
+            with open(self.str_idx_file_name, 'rb') as idx_file:
+                pos = 0
+                while True:
+                    to = self.next_from_file(idx_file)
+                    if not to:
+                        break
+
+                    if to.term_id in dic_ids_por_termo:
+                        dic_ids_por_termo[to.term_id]["tfp"].doc_count_with_term = (
+                                self.document_count_with_term(dic_ids_por_termo[to.term_id]["term"]) + 1)
+                        dic_ids_por_termo[to.term_id]["tfp"].term_file_start_pos = pos
+                    pos = pos + 1
+        else:
+            print("Arquivo indexado maior que 8GB. Memória insificiente")
 
         for i, e in dic_ids_por_termo.items():
             self.dic_index[e["term"]] = e["tfp"]

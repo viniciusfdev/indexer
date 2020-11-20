@@ -8,11 +8,57 @@ from index.structure import *
 import unittest
 
 class IndexerTest(unittest.TestCase):
-    def test_indexer_wiki(self):
+    def test_indexer_wiki_short(self):
         print("running...")
+
+        self.time = datetime.now()
+        tracemalloc.start()
+
         obj_index = FileIndex()
         html_indexer = HTMLIndexer(obj_index)
         html_indexer.index_all_text_recursively("wiki/100")
+
+        delta = datetime.now() - self.time
+        self.print_status(delta)
+        tracemalloc.stop()
+        obj_index.calc_avg_time_mem(delta.total_seconds())
+
+    def test_indexer_wiki_hashindex(self):
+        print("running...")
+
+        self.time = datetime.now()
+        tracemalloc.start()
+
+        obj_index = HashIndex()
+        html_indexer = HTMLIndexer(obj_index)
+        html_indexer.index_all_text_recursively("wiki/100")
+
+        delta = datetime.now() - self.time
+        self.print_status(delta)
+        tracemalloc.stop()
+        obj_index.calc_avg_time_mem()
+
+    def test_indexer_wiki_full(self):
+        print("running...")
+
+        self.time = datetime.now()
+        tracemalloc.start()
+
+        obj_index = FileIndex()
+        html_indexer = HTMLIndexer(obj_index)
+        html_indexer.index_all_text_recursively("wiki")
+
+        delta = datetime.now() - self.time
+        self.print_status(delta)
+        tracemalloc.stop()
+        obj_index.calc_avg_time_mem(delta.total_seconds())
+
+    def print_status(self, delta):
+        current, peak = tracemalloc.get_traced_memory()
+
+        clear_output(wait=True)
+        print((f"Memoria usada: {current / 10 ** 6:,} MB; Máximo {peak / 10 ** 6:,} MB"), flush=True)
+        print((f"Tempo gasto: {delta.total_seconds()}s"), flush=True)
 
     def test_indexer(self):
         obj_index = HashIndex()

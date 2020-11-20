@@ -1,17 +1,9 @@
-import fnmatch
-import tracemalloc
-from datetime import datetime
-
-from IPython.display import clear_output
 from nltk.stem.snowball import SnowballStemmer
 from bs4 import BeautifulSoup
 from pathlib import Path
 import string
 import nltk
 import os
-import time
-import psutil
-
 
 # nltk.download('punkt')
 
@@ -113,9 +105,6 @@ class HTMLIndexer:
 
     # Wikipedia
     def index_all_text_recursively(self, path: str):
-        self.time = datetime.now()
-        tracemalloc.start()
-
         for i, path in enumerate(Path(path).rglob('*.html')):
             # delta = datetime.now() - self.time
             # self.print_status(delta)
@@ -125,15 +114,4 @@ class HTMLIndexer:
                     self.index_text(i, idx_file)
                 except:
                     pass
-
-        delta = datetime.now() - self.time
-        self.print_status(delta)
-        tracemalloc.stop()
-        self.index.calc_avg_time_mem(delta.total_seconds())
-
-    def print_status(self, delta):
-        current, peak = tracemalloc.get_traced_memory()
-
-        clear_output(wait=True)
-        print((f"Memoria usada: {current / 10 ** 6:,} MB; Máximo {peak / 10 ** 6:,} MB"), flush=True)
-        print((f"Tempo gasto: {delta.total_seconds()}s"), flush=True)
+        self.index.finish_indexing()
